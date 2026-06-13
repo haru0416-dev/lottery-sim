@@ -79,12 +79,12 @@ Cloudflare ダッシュボードでリポジトリを接続し、ビルド設定
 
 `public/_headers` はどちらの方法でも自動適用される。
 
-### 公開ドメインが決まったら
+### 独自ドメインを使うとき
 
-OG/Twitter 画像は相対パス `og.png`(ルート配信で各SNSのクローラが解決可)。X カードを最も確実にするには、
-独自ドメイン確定後に `index.html` の `og:image` / `twitter:image` を `https://<ドメイン>/og.png` の
-絶対URLにすると堅実。`_headers` の CSP は初回デプロイ後に一度動作確認すること(フォント/スタイルが
-崩れたら CSP が原因)。
+OG/Twitter 画像は `index.html` で **絶対URL**(`https://lottery-sim.pages.dev/og.png`)を指定している
+(X 等のクローラは相対パスを解決しないため)。独自ドメインに移す場合は `og:url` / `og:image` /
+`twitter:image` のホスト部を差し替えること。`_headers` の CSP は初回デプロイ後に一度動作確認する
+(フォント/スタイルが崩れたら CSP が原因)。
 
 ## 構成
 
