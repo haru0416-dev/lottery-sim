@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.log
+.DS_Store
+.vite
+.wrangler
+.dev.vars
+.idea
+.vscode
+*.tsbuildinfo

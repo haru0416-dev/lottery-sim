@@ -1,0 +1,7 @@
+# 改行コードを LF に統一(クロスプラットフォームでの差分ノイズ防止)
+* text=auto eol=lf
+
+# バイナリ(差分を取らない)
+*.png binary
+*.lockb binary
+bun.lock -diff linguist-generated

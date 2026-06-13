@@ -1,0 +1,17 @@
+# Cloudflare Pages — レスポンスヘッダー
+# 全ページ: セキュリティヘッダー
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), browsing-topics=()
+  # CSP: このアプリの実リソースに最小化。
+  #  - script は自前バンドルのみ('self')
+  #  - style は React のインラインスタイル + Tweaks の<style>注入 + Google Fonts CSS
+  #  - font は Google Fonts(gstatic)、img は自前 + data:(SVGファビコン)
+  #  - 外部APIなし(connect 'self')、フレーム禁止、フォーム送信なし
+  Content-Security-Policy: default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+
+# ハッシュ付きの静的資産は1年不変キャッシュ(ファイル名にハッシュが入るため安全)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

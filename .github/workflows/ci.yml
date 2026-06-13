@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run check # oxfmt --check && oxlint && tsc --noEmit
+      - run: bun run build
+      - run: bun run smoke # エンジン+データ定義の検証(組合せ論照合・還元率)

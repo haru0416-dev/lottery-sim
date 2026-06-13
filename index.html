@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>宝くじシミュレーター</title>
+    <meta
+      name="description"
+      content="公表確率・理論賞金額に基づく宝くじの統計シミュレーター。ジャンボ・ロト・ナンバーズ・スクラッチを長期購入したときの収支をグラフと帳票で検証できます。"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' rx='5' fill='%23a93622'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Hiragino Sans,Noto Sans JP,sans-serif' font-size='18' font-weight='700' fill='%23ffffff'%3E宝%3C/text%3E%3C/svg%3E"
+    />
+    <meta name="theme-color" content="#f7f5f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#100e0c" media="(prefers-color-scheme: dark)" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- Open Graph / Twitter Card(X共有・リンク展開用) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="宝くじシミュレーター" />
+    <meta property="og:title" content="宝くじシミュレーター" />
+    <meta
+      property="og:description"
+      content="もし宝くじを何年も買い続けたら、収支はどうなる？ 公表確率・理論賞金額に忠実な統計シミュレーション。"
+    />
+    <meta property="og:image" content="og.png" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="宝くじシミュレーター" />
+    <meta
+      name="twitter:description"
+      content="もし宝くじを何年も買い続けたら？ 公表確率に忠実な統計シミュレーター。破産確率・モンテカルロ分析つき。"
+    />
+    <meta name="twitter:image" content="og.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div
+        style="
+          max-width: 36rem;
+          margin: 15vh auto;
+          padding: 0 1.5rem;
+          font-family: 'Hiragino Sans', sans-serif;
+          color: #211d19;
+          line-height: 1.8;
+        "
+      >
+        <h1 style="font-size: 1.2rem">宝くじシミュレーター</h1>
+        <p>このアプリの利用には JavaScript が必要です。ブラウザの設定で JavaScript を有効にしてください。</p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,1597 @@
+/* 宝くじシミュレーター — スタイル
+   意匠: 印刷物・宝くじ券面。紙白×墨罫×朱。
+   - 構造は罫線(子持ち罫・表罫)で作る。光らせない、ぼかさない。
+   - 黒字=墨 / 赤字=朱(帳簿の朱記)。当せんも朱(判子)。
+   - 個性は普段は静かに、当せんの瞬間(スタンプ)に集中させる。 */
+:root {
+  --bg: oklch(0.972 0.004 70); /* 紙白(クリームに寄せないニュートラル) */
+  --card: oklch(0.995 0.002 70); /* 帳票面 — 不透明 */
+  --line-strong: oklch(0.21 0.01 50 / 0.5);
+  --line: oklch(0.21 0.01 50 / 0.26);
+  --grid: oklch(0.21 0.01 50 / 0.1);
+  --fill: oklch(0.21 0.01 50 / 0.045);
+  --ink: oklch(0.21 0.01 50); /* 墨 */
+  --ink-2: oklch(0.36 0.012 45);
+  --ink-3: oklch(0.49 0.012 45); /* 小サイズ文字でも AA(実測 6.2:1) */
+  --pos: oklch(0.25 0.015 50); /* 黒字 = 墨 */
+  --neg: oklch(0.5 0.155 32); /* 赤字 = 朱(実測 6.4:1) */
+  --accent: #a93622; /* 朱 — Tweaksで伝統インク4色に切替可 */
+  --accent-text: var(--accent); /* テキストとして使う時のアクセント(ダークで明るく振る) */
+  --on-accent: #ffffff; /* アクセント面の上の文字(実測 6.5:1) */
+  --annot: oklch(0.45 0.1 265); /* 藍 — NISA注記線(帳簿の青ペン) */
+  --cmpline: oklch(0.55 0.11 80); /* 金茶 — 比較系列 */
+  --mix-base: #ffffff;
+  --radius: 2px; /* 印刷物の角 */
+  /* モーションのイージング(自然な減速。bounce/elasticは使わない) */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light; /* ネイティブコントロール(select・checkbox・スクロールバー)をテーマに同調 */
+}
+
+[data-theme='dark'] {
+  --bg: oklch(0.165 0.006 60); /* 夜の帳簿 — 墨紙 */
+  --card: oklch(0.21 0.007 60);
+  --line-strong: oklch(0.93 0.006 80 / 0.42);
+  --line: oklch(0.93 0.006 80 / 0.22);
+  --grid: oklch(0.93 0.006 80 / 0.09);
+  --fill: oklch(0.93 0.006 80 / 0.06);
+  --ink: oklch(0.93 0.006 80);
+  --ink-2: oklch(0.76 0.008 75);
+  --ink-3: oklch(0.64 0.012 60); /* 実測 5.3:1 */
+  --pos: oklch(0.88 0.008 80);
+  --neg: oklch(0.72 0.13 32); /* 実測 6.8:1 */
+  --accent-text: color-mix(in oklab, var(--accent) 55%, white); /* 実測 8.4:1 */
+  --annot: oklch(0.7 0.09 265);
+  --cmpline: oklch(0.72 0.1 80);
+  --mix-base: oklch(0.22 0.008 60);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans JP', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* 紙の下地: ごく薄い印刷ノイズ(グロー・ブラーは使わない) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-color: var(--bg);
+}
+
+.num {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.01em;
+}
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ---- header: 子持ち罫(太+細)が紙面の天 ---- */
+.topbar {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 28px 12px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--ink);
+}
+/* 子持ち罫の子(細罫) */
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  border-bottom: 1px solid var(--ink);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: inline-grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.brand h1 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.06em;
+}
+.topbar-note {
+  color: var(--ink-3);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+/* ---- layout ---- */
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  padding: 18px 28px 40px;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* 帳票面: 不透明・罫線・影なし */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.sec-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 12px;
+  letter-spacing: 0.08em;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2px 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 7px;
+  margin-bottom: 12px;
+}
+.card-head .sec-title {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+.card-status {
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* ---- game chips: 札 — 選択は墨ベタ白抜き ---- */
+.game-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease-out-quart),
+    background 0.15s var(--ease-out-quart),
+    color 0.15s var(--ease-out-quart);
+}
+.chip:hover {
+  border-color: var(--ink);
+  background: var(--fill);
+}
+.chip:active:not(.active) {
+  background: color-mix(in srgb, var(--ink) 8%, var(--mix-base));
+}
+.chip.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}
+.chip-name {
+  white-space: nowrap;
+}
+.chip-price {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.chip.active .chip-price {
+  color: color-mix(in srgb, var(--card) 75%, transparent);
+}
+
+.game-info {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.gi-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 13px;
+  border-bottom: 1px dotted var(--grid);
+}
+.gi-row:last-child {
+  border-bottom: none;
+}
+.gi-row span {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.gi-row strong {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- controls ---- */
+.ctrl {
+  margin-bottom: 12px;
+}
+.ctrl-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.ctrl-line label {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.ctrl-line span {
+  font-weight: 600;
+}
+.ctrl input[type='range'] {
+  width: 100%;
+  accent-color: var(--ink);
+  margin: 0;
+}
+
+.cmp-sub {
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+  margin: -4px 0 12px;
+}
+.cmp-sub .ctrl {
+  margin-bottom: 8px;
+}
+.cmp-sub .ctrl:last-child {
+  margin-bottom: 0;
+}
+
+.plan-note {
+  background: var(--fill);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-bottom: 14px;
+}
+.plan-note strong {
+  color: var(--ink);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    filter 0.15s var(--ease-out-quart),
+    background 0.15s var(--ease-out-quart),
+    transform 0.08s var(--ease-out-quart);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 80%, black);
+  color: var(--on-accent);
+}
+.btn.primary:hover {
+  filter: brightness(0.93);
+}
+.btn.secondary {
+  background: var(--card);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.btn.secondary:hover {
+  background: var(--fill);
+}
+.btn.danger {
+  background: color-mix(in srgb, var(--neg) 8%, var(--mix-base));
+  border-color: var(--neg);
+  color: var(--neg);
+}
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.btn.ghost:hover {
+  background: var(--fill);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.anim-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin: 8px 0;
+}
+.anim-row select {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card);
+}
+
+.disclaimer {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin: 0;
+  padding: 0 4px;
+  line-height: 1.7;
+}
+.disclaimer strong {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.about {
+  margin: 8px 4px 0;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.about > summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  padding: 2px 0;
+  list-style-position: inside;
+}
+.about > summary:hover {
+  color: var(--ink);
+}
+.about ul {
+  margin: 6px 0 0;
+  padding-left: 1.1em;
+  line-height: 1.65;
+}
+.about li {
+  margin-bottom: 4px;
+}
+.about strong {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+/* ---- 数字選択: マークシート(申込カード) ---- */
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.seg-btn {
+  border: none;
+  background: var(--card);
+  border-radius: 0;
+  padding: 8px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease-out-quart),
+    color 0.15s var(--ease-out-quart);
+}
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--line);
+}
+.seg-btn:not(.on):hover {
+  color: var(--ink);
+  background: var(--fill);
+}
+/* seg は overflow:hidden なのでフォーカスリングを内側に */
+.seg-btn:focus-visible {
+  outline-offset: -3px;
+}
+.seg-btn.on {
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}
+.pick-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.pick-count {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.pick-count.ok {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.pick-actions {
+  display: flex;
+  gap: 6px;
+}
+.mini-btn {
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease-out-quart),
+    color 0.15s var(--ease-out-quart),
+    background 0.15s var(--ease-out-quart),
+    transform 0.08s var(--ease-out-quart);
+}
+.mini-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--fill);
+}
+.mini-btn:active {
+  transform: translateY(1px);
+}
+.num-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  max-width: 460px;
+}
+.num-cell {
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  border-radius: 1px; /* マーク欄 */
+  padding: 0;
+  min-height: 38px;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background 0.12s var(--ease-out-quart),
+    border-color 0.12s var(--ease-out-quart),
+    color 0.12s var(--ease-out-quart),
+    transform 0.08s var(--ease-out-quart);
+}
+.num-cell:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+/* マークを押す触覚フィードバック */
+.num-cell:active {
+  transform: scale(0.92);
+}
+.num-cell.on {
+  background: var(--ink); /* 塗りつぶしマーク */
+  border-color: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}
+.num-grid.full .num-cell:not(.on) {
+  opacity: 0.4;
+}
+.pick-note {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin: 8px 0 0;
+}
+.pick-note.warn {
+  color: var(--neg);
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.check-row input {
+  accent-color: var(--ink);
+  width: 15px;
+  height: 15px;
+  margin: 1px 0 0;
+  flex: none;
+}
+.check-row span {
+  flex: 1;
+}
+
+.carry-status {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  margin-top: 10px;
+  background: var(--fill);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 12.5px;
+}
+.carry-status span {
+  color: var(--ink-3);
+}
+.carry-status strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ---- 1等当選: 賞状(二重枠 + 彩紋 + 朱印) ---- */
+.jackpot-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  background:
+    repeating-radial-gradient(
+      circle at -10% 50%,
+      transparent 0 7px,
+      color-mix(in srgb, var(--accent) 6%, transparent) 7px 8px
+    ),
+    repeating-radial-gradient(
+      circle at 110% 50%,
+      transparent 0 7px,
+      color-mix(in srgb, var(--accent) 6%, transparent) 7px 8px
+    ),
+    var(--card);
+  border: 1px solid var(--accent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin: 4px; /* 外枠(outline)のぶん */
+}
+@media (prefers-reduced-motion: no-preference) {
+  .jackpot-banner {
+    animation: jackpot-pop 0.35s ease-out;
+  }
+  .jb-badge {
+    animation: stamp-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+}
+@keyframes jackpot-pop {
+  0% {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* 判子を押す瞬間 */
+@keyframes stamp-in {
+  0% {
+    transform: rotate(-14deg) scale(1.9);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-3deg) scale(1);
+  }
+}
+.jb-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+  background: transparent;
+  border: 2px solid var(--accent-text);
+  border-radius: 3px;
+  padding: 2px 10px;
+  transform: rotate(-3deg); /* 朱印 */
+}
+.jb-text {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.jb-text strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.cap-note {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* ---- KPI: カードではなく1枚の帳票ヘッダー(ヘアライン分割) ---- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1px;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.kpis .panel {
+  border: none;
+  border-radius: 0;
+}
+.kpi {
+  min-width: 0;
+  background: var(--card);
+}
+.kpi-label {
+  font-size: 12px;
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+}
+.kpi-value {
+  font-family: 'Oswald', 'IBM Plex Mono', ui-monospace, monospace; /* 券面の組番数字 */
+  font-size: clamp(20px, 1.9vw, 28px);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin: 4px 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.kpi-value.pos {
+  color: var(--pos);
+}
+.kpi-value.neg {
+  color: var(--neg);
+}
+.kpi-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+/* ---- chart ---- */
+.run-progress {
+  height: 3px;
+  border-radius: 0;
+  background: var(--grid);
+  overflow: hidden;
+  margin: 2px 0 10px;
+}
+.run-progress i {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.15s linear;
+}
+
+.chart-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+.chart-empty {
+  height: 304px; /* 描画後のチャート(凡例+SVG)と同じ高さにして初回実行時のレイアウトシフトを防ぐ */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 13px;
+  background: repeating-linear-gradient(-45deg, transparent 0 14px, var(--grid) 14px 28px);
+  border-radius: var(--radius);
+  padding: 0 24px;
+}
+.chart-empty .ce-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+.chart-empty .ce-hint {
+  max-width: 38ch;
+  line-height: 1.7;
+  text-wrap: balance;
+}
+.tick-label {
+  font-size: 10.5px;
+  fill: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.last-label {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.tip-label {
+  font-size: 10.5px;
+  fill: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.tip-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 0 0 6px 2px;
+  flex-wrap: wrap;
+}
+.lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.lg-line {
+  width: 16px;
+  height: 2px;
+  border-radius: 0;
+  display: inline-block;
+}
+.lg-dash {
+  width: 16px;
+  height: 0;
+  display: inline-block;
+  border-top: 2px dashed var(--ink-3);
+}
+.lg-dash.sav {
+  border-top: 2px dotted var(--annot);
+}
+/* ファンチャートの帯見本 */
+.lg-band {
+  width: 16px;
+  height: 9px;
+  display: inline-block;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.lg-band.band-90 {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.lg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+/* 最大ドローダウンのハッチ見本 */
+.lg-hatch {
+  width: 14px;
+  height: 9px;
+  display: inline-block;
+  border: 1px solid var(--line);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 2px,
+    color-mix(in srgb, var(--neg) 40%, transparent) 2px 3px
+  );
+}
+/* 最高点・最低点の付箋ラベル */
+.annot-label {
+  font-size: 10.5px;
+  fill: var(--ink-2);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* 一括結果の確定時、墨線をペンで引くように描画(ライブ描画中は適用しない) */
+@media (prefers-reduced-motion: no-preference) {
+  .chart-anim-in .balance-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: line-draw 0.55s var(--ease-out-quint) forwards;
+  }
+  .chart-anim-in .balance-area {
+    opacity: 0;
+    animation: area-fade-in 0.4s var(--ease-out-quart) 0.3s forwards;
+  }
+  /* 結果ブロックが現れる瞬間の控えめな立ち上がり(帳票が刷られる感じ)。
+     既定状態は表示(opacity:1)なので、アニメが走らない環境でも欠落しない */
+  .summary-card,
+  .cap-note {
+    animation: result-rise 0.32s var(--ease-out-quart) both;
+  }
+}
+@keyframes line-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes area-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes result-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.stack .grow {
+  flex: 1;
+}
+
+/* ---- tier table: 表組(天罫は太く) ---- */
+.tier-head,
+.tier-line {
+  display: grid;
+  grid-template-columns: minmax(74px, auto) 1fr 1fr auto minmax(86px, auto);
+  gap: 10px;
+  align-items: baseline;
+}
+.tier-head {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 6px;
+}
+.ta-r {
+  text-align: right;
+}
+.tier-row {
+  padding: 5px 0 7px;
+  border-bottom: 1px solid var(--grid);
+}
+.tier-row:last-child {
+  border-bottom: none;
+}
+.tier-label {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tier-prize,
+.tier-prob {
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.tier-count {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.tier-amt {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tier-row.hit .tier-count,
+.tier-row.hit .tier-amt {
+  color: var(--accent-text);
+}
+.tier-bar {
+  height: 4px;
+  border-radius: 0;
+  background: var(--grid);
+  margin-top: 5px;
+  overflow: hidden;
+}
+.tier-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s var(--ease-out-quart);
+}
+
+/* ---- compare bars ---- */
+.cmp-row {
+  margin-bottom: 12px;
+}
+.cmp-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.cmp-label {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.cmp-value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cmp-track {
+  height: 14px;
+  border-radius: 0;
+  background: var(--grid);
+  overflow: hidden;
+}
+.cmp-track i {
+  display: block;
+  height: 100%;
+  border-radius: 0;
+  transition: width 0.2s var(--ease-out-quart);
+}
+.cmp-foot {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.cmp-foot strong {
+  font-size: 15px;
+  color: var(--ink);
+  margin-left: 4px;
+}
+
+/* ---- highlights ---- */
+.high-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.high-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--grid);
+  font-size: 12.5px;
+}
+.high-list li:last-child {
+  border-bottom: none;
+}
+.hl-draw {
+  color: var(--ink-3);
+}
+.hl-tier {
+  font-weight: 600;
+}
+.hl-prize {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+.more-note {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  padding-top: 6px;
+}
+.empty-note {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  padding: 8px 0;
+}
+
+/* ---- log ---- */
+.log-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.log-row {
+  padding: 4px 8px;
+  border-radius: 0;
+  font-size: 12.5px;
+}
+.log-main {
+  display: grid;
+  grid-template-columns: minmax(86px, auto) 1fr auto minmax(64px, auto);
+  gap: 12px;
+  align-items: baseline;
+}
+.lg-nums {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  padding-top: 1px;
+}
+.lg-nums i {
+  font-style: normal;
+  color: var(--accent-text);
+  font-weight: 600;
+  margin: 0 6px;
+}
+/* 「当せん番号」ラベル(購入数字と誤読されないように) */
+.lg-nums .lg-nums-label {
+  font-style: normal;
+  font-family: 'IBM Plex Sans JP', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  border: 1px solid var(--line);
+  border-radius: 1px;
+  padding: 0 4px;
+  margin-right: 7px;
+}
+.log-row:nth-child(odd) {
+  background: var(--fill);
+}
+.lg-draw {
+  color: var(--ink-3);
+}
+.lg-buy {
+  color: var(--ink-2);
+}
+.lg-result {
+  text-align: right;
+  color: var(--ink-3);
+}
+.log-row.win .lg-result {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.lg-result {
+  white-space: nowrap;
+}
+.log-row.big {
+  background: color-mix(in srgb, var(--accent) 8%, var(--mix-base));
+}
+.log-row.big .lg-result {
+  color: var(--accent-text);
+}
+.lg-tier {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  text-align: right;
+}
+
+/* ---- プリセット(控え券: 破線ミシン目) / サマリー / 統計 / トースト ---- */
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.pchip {
+  border: 1px dashed var(--line-strong);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 4px 11px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s var(--ease-out-quart),
+    color 0.15s var(--ease-out-quart),
+    transform 0.08s var(--ease-out-quart);
+}
+.pchip:hover {
+  border-color: var(--ink);
+  border-style: solid;
+  color: var(--ink);
+}
+.pchip:active {
+  transform: translateY(1px);
+}
+
+.seg.cols3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cmp-select {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card);
+}
+
+/* 共有ボタン群(X / 画像保存) */
+.share-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.share-actions .mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.share-actions .x-icon {
+  display: inline-block;
+  vertical-align: -1px;
+}
+
+/* サマリー: 1行の総括文 + ラベル付き明細(帳票の摘要欄) */
+.summary-lead {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.summary-lead strong {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.summary-lead .pos {
+  color: var(--pos);
+}
+.summary-lead .neg {
+  color: var(--neg);
+}
+
+.summary-rows {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.summary-rows .sr {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+.summary-rows dt {
+  color: var(--ink-3);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+.summary-rows dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+.summary-rows dd .num,
+.summary-rows dd strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.summary-rows dd .pos {
+  color: var(--pos);
+}
+.summary-rows dd .neg {
+  color: var(--neg);
+}
+.summary-rows .sr-meta {
+  color: var(--ink-3);
+  margin-left: 8px;
+  font-size: 11.5px;
+}
+.summary-rows .sr-muted {
+  color: var(--ink-3);
+}
+.summary-rows .cosmic-note {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+@media (max-width: 480px) {
+  .summary-rows .sr {
+    grid-template-columns: 64px 1fr;
+    gap: 8px;
+  }
+}
+
+.mt-controls {
+  display: flex;
+  flex-wrap: wrap; /* 狭幅(〜320px)で試行回数+元手+ボタンがはみ出さないよう折り返す */
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.mt-controls select {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card);
+}
+.btn.sm {
+  display: inline-block;
+  width: auto;
+  padding: 7px 16px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.hist-note {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin: 4px 0 0;
+}
+.mt-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px 16px;
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.mt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mt-label {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.mt-stat strong {
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mt-stat .pos {
+  color: var(--pos);
+}
+.mt-stat .neg {
+  color: var(--neg);
+}
+/* 最終分布ヒストグラムの折りたたみ */
+.mt-hist {
+  margin-top: 10px;
+}
+.mt-hist > summary {
+  font-size: 12px;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 4px 0;
+  list-style-position: inside;
+}
+.mt-hist > summary:hover {
+  color: var(--ink);
+}
+.mt-hist[open] > summary {
+  margin-bottom: 4px;
+}
+
+/* 当選トースト: 紙片 + 朱印 */
+.win-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 60;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100vw - 24px);
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 18px;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  font-size: 13.5px;
+}
+.win-toast .wt-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+  background: transparent;
+  border: 2px solid var(--accent-text);
+  border-radius: 3px;
+  padding: 0 7px;
+  transform: rotate(-3deg);
+}
+.win-toast .wt-label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.win-toast strong {
+  color: var(--accent-text);
+  font-size: 15px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .win-toast {
+    animation: toast-in 0.25s ease-out;
+  }
+  .win-toast .wt-badge {
+    animation: stamp-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+}
+@keyframes toast-in {
+  0% {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ---- responsive ---- */
+@media (max-width: 960px) {
+  /* 下部余白はフローティングの「⚙ 表示設定」FABが最下部コンテンツを隠さないぶんを確保 */
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 12px 14px 96px;
+  }
+  .topbar {
+    padding: 14px 14px 10px;
+  }
+  .kpis {
+    gap: 1px;
+  }
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+  .kpi-value {
+    font-size: 22px;
+  }
+  .layout,
+  .side,
+  .main {
+    gap: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .topbar-note {
+    display: none;
+  }
+  .tier-prob,
+  .tier-head span:nth-child(3) {
+    display: none;
+  }
+  .tier-head,
+  .tier-line {
+    grid-template-columns: minmax(64px, auto) 1fr auto minmax(80px, auto);
+  }
+  .log-main {
+    grid-template-columns: minmax(72px, auto) 1fr auto;
+  }
+  .lg-tier {
+    display: none;
+  }
+}
+
+/* ---- error fallback ---- */
+.error-fallback {
+  max-width: 520px;
+  margin: 12vh auto;
+  padding: 0 16px;
+}
+.error-fallback h1 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  letter-spacing: 0.04em;
+}
+.error-fallback p {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.8;
+  margin: 0 0 14px;
+}
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.error-actions .btn {
+  width: auto;
+}
+.error-detail {
+  margin: 14px 0 0;
+  padding: 8px 10px;
+  background: var(--fill);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- performance ---- */
+/* 実行中: 毎フレーム書き換わる幅トランジションを無効化(再起動コストとラグの原因) */
+.app.is-running .tier-bar i,
+.app.is-running .cmp-track i,
+.app.is-running .run-progress i {
+  transition: none;
+}
+
+/* 画面外のログ行はレイアウト・描画をスキップ(可視は約12行、保持は60行)。
+   幅はコンテナ依存なので intrinsic 幅は与えず(none)、高さのみ概算30pxを置く
+   (auto = 実測後はその値を記憶。オフスクリーン再訪時のスクロール跳ねを防止) */
+.log-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 30px;
+}
+
+/* ---- accessibility & touch ---- */
+/* スクリーンリーダー専用テキスト(視覚的に非表示) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* select をブラウザ間で統一(カスタムチェブロン)。中間グレーはライト/ダーク両方で読める */
+.anim-row select,
+.cmp-select,
+.mt-controls select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(125,128,140,.75)' d='M0 0h10L5 6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  transition: border-color 0.15s;
+}
+.anim-row select:hover,
+.cmp-select:hover,
+.mt-controls select:hover {
+  border-color: var(--ink);
+}
+
+/* 購入ログのスクロールバーを紙面に馴染む細身に */
+.log-list {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-3) 55%, transparent) transparent;
+}
+.log-list::-webkit-scrollbar {
+  width: 8px;
+}
+.log-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.log-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-3) 45%, transparent);
+  border-radius: 4px;
+}
+
+/* ホバー説明を持つ行に視覚的な手がかり(点線下線 + helpカーソル) */
+.gi-row[title] > span:first-child {
+  text-decoration: underline dotted color-mix(in srgb, var(--ink-3) 70%, transparent);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.tier-row[title] {
+  cursor: help;
+}
+
+/* reduced-motion ではすべてのアニメーション/トランジションを実質無効化 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* タッチ操作端末では小型コントロールを44pxへ引き上げ(Apple HIG / WCAG 2.5.5) */
+@media (pointer: coarse) {
+  .mini-btn,
+  .pchip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .chip {
+    min-height: 44px;
+  }
+  .seg-btn {
+    min-height: 44px;
+  }
+  .num-cell {
+    min-height: 44px;
+  }
+  .anim-row select,
+  .mt-controls select,
+  .cmp-select {
+    min-height: 44px;
+    font-size: 16px; /* iOS Safariのフォーカス時自動ズームを防ぐ(16px未満で発動) */
+  }
+}

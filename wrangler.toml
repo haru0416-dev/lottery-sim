@@ -1,0 +1,5 @@
+# Cloudflare Pages の構成(静的SPA。Functions/バインディングなし)
+# プロジェクト名はダッシュボード/初回デプロイ時の名前に合わせて変更可。
+name = "lottery-sim"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-06-13"
