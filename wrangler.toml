@@ -1,6 +1,8 @@
 # Cloudflare Pages の構成(静的SPA。Functions/バインディングなし)
 # プロジェクト名はダッシュボード/初回デプロイ時の名前に合わせて変更可。
 name = "lottery-sim"
-account_id = "07c33aecada72c05a1b60cc82b538a7a"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-06-13"
+# 複数の Cloudflare アカウントに紐づく場合は、deploy 時に環境変数で対象を指定:
+#   CLOUDFLARE_ACCOUNT_ID=<account id> bun run deploy
+# (Pages の wrangler.toml は account_id キーをサポートしないため)
